@@ -15,3 +15,5 @@ uvicorn
 uvloop
 httptools
 django-cors-headers
+google-cloud-storage
+django-storages

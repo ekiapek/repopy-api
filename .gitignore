@@ -127,3 +127,8 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+.vscode
+*.db
+repopy-bucket-b4a10a701f7f.json
+repopy-bucket-163ca94efdd5.json

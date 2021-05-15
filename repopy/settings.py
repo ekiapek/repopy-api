@@ -28,9 +28,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = '+^chs(6v44g1qn4v!m^l)somff56xoie1ik4_$i5btbmn_ld*-'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
+ENVIRONMENT = "live"
 
-ALLOWED_HOSTS = ['repopy-api.herokuapp.com','repopy.herokuapp.com']
+ALLOWED_HOSTS = ['localhost','127.0.0.1']
 
 
 # Application definition
@@ -60,8 +61,10 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOWED_ORIGINS = [
-    "https://repopy.herokuapp.com",
-    "https://repopy-api.herokuapp.com",
+    "http://localhost:8081",
+    "http://127.0.0.1:8081",
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
 ]
 
 ROOT_URLCONF = 'repopy.urls'
@@ -89,9 +92,14 @@ WSGI_APPLICATION = 'repopy.wsgi.application'
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases
 
 DATABASES = {
-    'default': dj_database_url.config(
-        default=config('DATABASE_URL')
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3', # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
+        'NAME': 'sqlite3.db',                      # Or path to database file if using sqlite3.
+        'USER': '',                      # Not used with sqlite3.
+        'PASSWORD': '',                  # Not used with sqlite3.
+        'HOST': '',                      # Set to empty string for localhost. Not used with sqlite3.
+        'PORT': '',                      # Set to empty string for default. Not used with sqlite3.
+    }
 }
 
 
@@ -119,7 +127,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Jakarta'
 
 USE_I18N = True
 
@@ -146,28 +154,28 @@ USE_TZ = True
 RESPONSE_SUCCESS = "0"
 RESPONSE_ERROR = "9"
 NO_REPOSITORY_FOUND = "5"
-REPO_BASE_PATH = "RepoPy"
-REPO_RAW_PATH = "raw-repositories"
-REPO_EXTRACTED_PATH = "repositories"
+REPO_BASE_PATH = "RepoPy/"
+REPO_RAW_PATH = "raw-repositories/"
+REPO_EXTRACTED_PATH = "repositories/"
 APPEND_SLASH = True
-MEDIA_ROOT = os.path.join(os.path.expanduser("~"), REPO_BASE_PATH)
+# MEDIA_ROOT = os.path.join(os.path.expanduser("~"), REPO_BASE_PATH)
 API_URL = "https://repopy.herokuapp.com/api/"
 RESERVED_KEYWORDS = [":related-with",":parent-of",":child-of",":function",":in"]
 
 #redis
-REDISEARCH_HOST = 'redis-14500.c240.us-east-1-3.ec2.cloud.redislabs.com'
-REDISGRAPH_HOST = 'redis-15471.c240.us-east-1-3.ec2.cloud.redislabs.com'
+REDISEARCH_HOST = '192.168.8.105'
+REDISGRAPH_HOST = '192.168.8.105'
 REDIS_PORT = 6379
 import redis
-REDISEARCH_INSTANCE = redis.Redis(host=REDISEARCH_HOST,port=14500, db=0,password=config('SEARCH_PASSWORD'))
-REDISGRAPH_INSTANCE = redis.Redis(host=REDISGRAPH_HOST,port=15471, db=0,password=config('GRAPH_PASSWORD'))
+REDISEARCH_INSTANCE = redis.Redis(host=REDISEARCH_HOST,port=REDIS_PORT, db=0,password="")
+REDISGRAPH_INSTANCE = redis.Redis(host=REDISGRAPH_HOST,port=REDIS_PORT, db=0,password="")
 REDISEARCH_CLIENT = None
 
 #Cache
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
-        'LOCATION': os.path.join(MEDIA_ROOT,"cache"),
+        'LOCATION': os.path.join(os.path.join(os.path.expanduser("~"), REPO_BASE_PATH),"cache"),
         'TIMEOUT': 900,
         'OPTIONS': {
             'MAX_ENTRIES': 1000
@@ -175,4 +183,39 @@ CACHES = {
     }
 }
 
+#GCP
+USE_GCP = True
+if ENVIRONMENT == 'dev' and not USE_GCP:
+    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+    
+    # STATIC_ROOT = 'static/'
+    # STATIC_URL = '/static/'
+    
+    MEDIA_ROOT = os.path.join(os.path.expanduser("~"), REPO_BASE_PATH)
+    MEDIA_URL = os.path.join(os.path.expanduser("~"), REPO_BASE_PATH)
+    
+    # UPLOAD_ROOT = 'uploads/'
+    
+    # DOWNLOAD_URL = STATIC_URL + "media/downloads"
+    # DOWNLOAD_ROOT = os.path.join(PROJECT_ROOT, "static/media/downloads")
+# for prod environment
+elif ENVIRONMENT == 'live' and USE_GCP: 
+        
+    DEFAULT_FILE_STORAGE = 'gcloud.GoogleCloudMediaFileStorage'
+    # STATICFILES_STORAGE = 'gcloud.GoogleCloudStaticFileStorage'
+    
+    GS_PROJECT_ID = 'repopy-bucket' #config('GS_PROJECT_ID')
+    # GS_STATIC_BUCKET_NAME = config('GS_STATIC_BUCKET_NAME')
+    GS_MEDIA_BUCKET_NAME = 'repopy-bucket'#config('GS_MEDIA_BUCKET_NAME')  # same as STATIC BUCKET if using single bucket both for static and media
+    
+    # STATIC_URL = 'https://storage.googleapis.com/{}/'.format(GS_STATIC_BUCKET_NAME)
+    # STATIC_ROOT = "static/"
+
+    MEDIA_URL = 'https://storage.googleapis.com/{}/'.format(GS_MEDIA_BUCKET_NAME)
+    MEDIA_ROOT = REPO_BASE_PATH
+    
+    # UPLOAD_ROOT = 'media/uploads/'
+    
+    # DOWNLOAD_ROOT = os.path.join(PROJECT_ROOT, "static/media/downloads")
+    # DOWNLOAD_URL = STATIC_URL + "media/downloads"
 django_heroku.settings(locals())
