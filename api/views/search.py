@@ -297,14 +297,14 @@ def search(request):
                     for resultFunction in resFunction.docs:
                         for resultClass in resClass.docs:
                             tupResult = [resultFunction,resultClass]
-                            if not any(tupResult[0].FunctionName == x[0].FunctionName and tupResult[1].ClassName == x[1].ClassName for x in rediSearchRes):
+                            if not any(tupResult[0].FunctionName == x[0].FunctionName and tupResult[0].FileID == x[0].FileID and tupResult[1].ClassName == x[1].ClassName and tupResult[1].FileID == x[1].FileID for x in rediSearchRes):
                                 rediSearchRes.append(tupResult)
 
                 for tupRedisResult in rediSearchRes:
                     resFunc = tupRedisResult[0]
                     resCls = tupRedisResult[1]
                     resGraph = graph.query("""MATCH (n:Function{{Name:"{0}",FileID:"{1}"}})<-[r:HasFunction]-(m:Class{{ClassName:"{2}",FileID:"{3}"}}) RETURN n,m""".format(resFunc.FunctionName,resFunc.FileID,resCls.ClassName,resCls.FileID))
-                    if len(resGraph.result_set) > 0:
+                    if resGraph is not None and len(resGraph.result_set) > 0:
                         for graphRes in resGraph.result_set:
                             ressFunc = graphRes[0].properties
                             ressClass = graphRes[1].properties
@@ -330,11 +330,11 @@ def search(request):
                     else:
                         #finding function definition in parent class
                         resgraphCurrentClassOnly = graph.query("""MATCH (n:Class{{ClassName:"{0}",FileID:"{1}"}}) RETURN n""".format(resCls.ClassName,resCls.FileID))                        
-                        if len(resgraphCurrentClassOnly.result_set) > 0:
+                        if resgraphCurrentClassOnly is not None and len(resgraphCurrentClassOnly.result_set) > 0:
                             for cls in resgraphCurrentClassOnly.result_set:
                                 currCls = cls[0].properties
                                 ressFunction = findFunctionInParentRecursive(graph=graph,currentClass=currCls,currentFunction=resFunc)
-                                if len(ressFunction) > 0:
+                                if ressFunction is not None and len(ressFunction) > 0:
                                     listResult.extend(ressFunction)
 
             if len(splitQuery) > 0:
@@ -361,7 +361,7 @@ def search(request):
                                 resModel.Filename = ressClass['Filename']
                                 
                                 resRelatedAsChild = graph.query("""MATCH (n:Class{{ClassName:"{0}",FileID:"{1}"}})-[r:parentOf]->(m:Class) RETURN m""".format(ressClass['ClassName'],ressClass['FileID']))
-                                if len(resRelatedAsChild.result_set) > 0:
+                                if resRelatedAsChild is not None and len(resRelatedAsChild.result_set) > 0:
                                     resModel.HasRelation = True
                                     for resChild in resRelatedAsChild.result_set:
                                         child = resChild[0].properties
@@ -490,7 +490,7 @@ def search(request):
 def findFuntionInParent(graph,parentClass,currentFunction):
     listResFunc = []
     resGraphFunction = graph.query("""MATCH (n:Function{{Name:"{0}",FileID:"{1}"}})<-[r:HasFunction]-(m:Class{{ClassName:"{2}",FileID:"{3}"}}) RETURN n,m""".format(currentFunction.FunctionName,currentFunction.FileID,parentClass['ClassName'],parentClass['FileID']))
-    if len(resGraphFunction.result_set)>0:
+    if resGraphFunction is not None and len(resGraphFunction.result_set)>0:
         for resFunc in  resGraphFunction.result_set:
             listResFunc.append(resFunc[0].properties)
     else:
@@ -501,7 +501,7 @@ def findFuntionInParent(graph,parentClass,currentFunction):
 def findParentRecursive(graph,currentClass,level):
     listResParent = []
     resGraphParent = graph.query("""MATCH (n:Class{{ClassName:"{0}",FileID:"{1}"}})<-[r:parentOf]-(m:Class) RETURN m""".format(currentClass['ClassName'],currentClass['FileID']))
-    if len(resGraphParent.result_set) > 0:
+    if resGraphParent is not None and len(resGraphParent.result_set) > 0:
         for resParents in resGraphParent.result_set:
             currClass = resParents[0].properties
             # listResParent.append(resParents[0].properties)
@@ -530,7 +530,7 @@ def findParentRecursive(graph,currentClass,level):
 def findChildRecursive(graph,currentClass,level):
     listResChild = []
     resGraphChild = graph.query("""MATCH (n:Class{{ClassName:"{0}",FileID:"{1}"}})-[r:parentOf]->(m:Class) RETURN m""".format(currentClass['ClassName'],currentClass['FileID']))
-    if len(resGraphChild.result_set) > 0:
+    if resGraphChild is not None and len(resGraphChild.result_set) > 0:
         for reshild in resGraphChild.result_set:
             currClass = reshild[0].properties
             # listResParent.append(resParents[0].properties)
@@ -547,7 +547,7 @@ def findChildRecursive(graph,currentClass,level):
             listResChild.append(childModel)
 
             resGraphChild2 = graph.query("""MATCH (n:Class{{ClassName:"{0}",FileID:"{1}"}})-[r:parentOf]->(m:Class) RETURN m""".format(currClass['ClassName'],currClass['FileID']))
-            if len(resGraphChild2.result_set) > 0:
+            if resGraphChild2 is not None and len(resGraphChild2.result_set) > 0:
                 ressFindChild = findChildRecursive(graph=graph,currentClass=currClass,level=level+1)
                 if ressFindChild is not None and len(ressFindChild) > 0:
                     listResChild += ressFindChild
@@ -563,7 +563,7 @@ def findFunctionInParentRecursive(graph,currentClass,currentFunction):
         for resParents in resGraphParent.result_set:
             currClass = resParents[0].properties
             resFunc = findFuntionInParent(graph=graph,parentClass=currClass,currentFunction=currentFunction)
-            if len(resFunc) > 0:
+            if resFunc is not None and len(resFunc) > 0:
                 # listResult = resFunc
                 for func in resFunc:
                     resModel = SearchResultModel()
