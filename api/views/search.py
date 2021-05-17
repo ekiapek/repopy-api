@@ -586,7 +586,9 @@ def findFunctionInParentRecursive(graph,currentClass,currentFunction):
 
                     listResult.append(resModel)
             else:
-                findFunctionInParentRecursive(graph=graph,currentClass=currClass,currentFunction=currentFunction)
+                nextiter = findFunctionInParentRecursive(graph=graph,currentClass=currClass,currentFunction=currentFunction)
+                if nextiter is not None:
+                    listResult.extend(nextiter)
     else:
         return None
     
