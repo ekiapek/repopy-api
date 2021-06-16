@@ -142,7 +142,7 @@ def search(request):
                 j += 1
                 while j<len(splitQuery) and not foundAnotherReserved2:
                     if splitQuery[j] in RESERVED_KEYWORDS:
-                        foundAnotherReserved = True
+                        foundAnotherReserved2 = True
                     else:
                         classes.append(splitQuery[j])
                     j+=1
