@@ -60,8 +60,7 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOWED_ORIGINS = [
-    "https://repopy.herokuapp.com",
-    "https://repopy-api.herokuapp.com",
+    "http://localhost:8080"
 ]
 
 ROOT_URLCONF = 'repopy.urls'
@@ -89,11 +88,11 @@ WSGI_APPLICATION = 'repopy.wsgi.application'
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases
 
 DATABASES = {
-    'default': dj_database_url.config(
-        default=config('DATABASE_URL')
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/3.1/ref/settings/#auth-password-validators
@@ -153,14 +152,15 @@ APPEND_SLASH = True
 MEDIA_ROOT = os.path.join(os.path.expanduser("~"), REPO_BASE_PATH)
 API_URL = "https://repopy.herokuapp.com/api/"
 RESERVED_KEYWORDS = [":related-with",":parent-of",":child-of",":function",":in"]
+EXCLUDED_EXTENSION = [".pyc",".exe",".png",".jpg",".deb",".svg"]
 
 #redis
-REDISEARCH_HOST = 'redis-14500.c240.us-east-1-3.ec2.cloud.redislabs.com'
-REDISGRAPH_HOST = 'redis-15471.c240.us-east-1-3.ec2.cloud.redislabs.com'
+REDISEARCH_HOST = ''
+REDISGRAPH_HOST = ''
 REDIS_PORT = 6379
 import redis
-REDISEARCH_INSTANCE = redis.Redis(host=REDISEARCH_HOST,port=14500, db=0,password=config('SEARCH_PASSWORD'))
-REDISGRAPH_INSTANCE = redis.Redis(host=REDISGRAPH_HOST,port=15471, db=0,password=config('GRAPH_PASSWORD'))
+REDISEARCH_INSTANCE = redis.Redis(host=REDISEARCH_HOST,port=REDIS_PORT, db=0,password="")
+REDISGRAPH_INSTANCE = redis.Redis(host=REDISGRAPH_HOST,port=REDIS_PORT, db=0,password="")
 REDISEARCH_CLIENT = None
 
 #Cache

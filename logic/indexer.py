@@ -1,4 +1,5 @@
 import pathlib
+from repopy.settings import EXCLUDED_EXTENSION
 from typing import Text
 from redisearch import Client,IndexDefinition,TextField,AutoCompleter,Suggestion
 from redisgraph import Node, Edge, Graph
@@ -48,7 +49,7 @@ def indexRepo(repo=None, redisGraphConn=None, rediSearchConn=None):
             files = FileModel.objects.filter(RepositoryID = _repo.RepositoryID)
             for file in files:
                 f = pathlib.Path(file.FilePath)
-                if(file.IsDirectory == False and (f.suffix != '.pyc' and f.suffix != ".exe")):
+                if(file.IsDirectory == False and (f.suffix not in EXCLUDED_EXTENSION)):
                     print("read: {0}".format(file.FilePath))
                     content = open(file.FilePath,"r",errors='ignore').read()
                     client.redis.hset("doc:"+str(file.FileID),
@@ -60,32 +61,6 @@ def indexRepo(repo=None, redisGraphConn=None, rediSearchConn=None):
                             'Content' : content,
                         }
                     )
-
-
-            #insert terms in redisearch
-            # for doc in _repo.Documents:
-            #     docID = uuid.uuid4()
-            #     classes_in_doc = []
-            #     content = open(doc.DocumentPath).read()
-            #     for classModel in doc.Classes:
-            #         classes_in_doc.append(classModel.Name)
-            #         classes.append(classModel)
-            #         for parent in classModel.Parents:
-            #             classes_in_doc.append(parent.Name)
-            #     # print(str(docID))
-            #     # jsons.dumps(doc)
-            #     strClassInDoc = " ".join(classes_in_doc)
-            #     client.add_document("doc:"+str(docID),
-            #             DocumentName = doc.DocumentName,
-            #             Content = content,
-            #             Classes = strClassInDoc,
-            #             replace=True
-            #         # mapping={
-            #         #     'DocumentName' : doc.DocumentName,
-            #         #     'Content' : content,
-            #         #     'Classes' : strClassInDoc
-            #         # }
-            #     )
 
             #identifying classes in the whole repository
             for doc in _repo.Documents:
@@ -118,61 +93,6 @@ def indexRepo(repo=None, redisGraphConn=None, rediSearchConn=None):
                         }
                     )
                     term += 1
-
-                    for parent in classModel.Parents:
-                        #check if parent is from this repository
-                        x = list(filter(lambda y: y.Name == parent.Name and parent.Type != "attribute", classes))
-                        if(len(x)>0):
-                            pass
-                            #using graph MERGE command to ensure that the node only exist once
-                            #implemented later after all classes in this repository has been indexed as a node
-                            # for parentCls in x:
-                            #     queries = []
-                            #     queries.append("""MERGE (parent:Class{{ClassName:"{0}",Type:"{1}",LineNo:{2},ColOffset:{3}}})""".format(parentCls.Name, parentCls.Type, parentCls.LineNo, parentCls.ColOffset))
-                            #     queries.append("""MERGE (base:Class{{ClassName:"{0}",Type:"{1}",LineNo:{2},ColOffset:{3},FileID:"{4}"}})""".format(classModel.Name, classModel.Type, classModel.LineNo, classModel.ColOffset,str(f.FileID)))
-                            #     queries.append("""MERGE (parent)-[r:parentOf]->(base)""")
-
-                            #     graph.query(" ".join(queries))
-                        
-                            # for i in x:
-                                # print(i.Name+" "+i.Type+" "+str(i.LineNo)+" "+str(i.ColOffset))
-                                # parentClass = Node(label = "Class", properties = {
-                                #     'ClassName': i.Name,
-                                #     'Type' : i.Type,
-                                #     'LineNo' : i.LineNo,
-                                #     'ColOffset' : i.ColOffset
-                                # })
-                                # graph.merge()
-                                # graph.add_node(parentClass)
-                                # relation = Edge(parentClass,'parentOf',baseClass)
-                                # graph.add_edge(relation)
-                        else:
-                            # print(parent.Name+" "+parent.Type)
-                            # parentClass = Node(label = "Class", properties = {
-                            #     'ClassName': parent.Name,
-                            #     'Type' : parent.Type,
-                            #     'LineNo' : '',
-                            #     'ColOffset' : ''
-                            # })
-                            # graph.add_node(parentClass)
-                            # relation = Edge(parentClass,'parentOf',baseClass)
-                            # graph.add_edge(relation)
-                            queries = []
-                            queries.append("""MERGE (parent:Class{{ClassName:"{0}",Type:"{1}",LineNo:'',ColOffset:''}})""".format(parent.Name, parent.Type))
-                            queries.append("""MERGE (base:Class{{ClassName:"{0}",Type:"{1}",LineNo:{2},ColOffset:{3},Namespace:"{4}",FileID:"{5}",Filename:"{6}"}})""".format(classModel.Name, classModel.Type, classModel.LineNo, classModel.ColOffset,classModel.Namespace,str(f.FileID),f.Filename))
-                            queries.append("""MERGE (parent)-[r:parentOf]->(base)""")
-                            graph.query(" ".join(queries))
-
-                            clientTerms.redis.hset(
-                                "term:"+str(term),
-                                mapping={
-                                    'ClassName':parent.Name,
-                                    'FunctionName':'',
-                                    'Position':"",
-                                    'FileID':""
-                                }
-                            )
-                            term += 1
 
                     for funct in classModel.Functions:
                         functionNode = Node(label="Function", properties={
@@ -215,6 +135,23 @@ def indexRepo(repo=None, redisGraphConn=None, rediSearchConn=None):
                                 queries.append("""MERGE (parent)-[r:parentOf]->(base)""")
 
                                 graph.query(" ".join(queries))
+                        else:
+                            queries = []
+                            queries.append("""MATCH (base:Class{{ClassName:"{0}",Type:"{1}",LineNo:{2},ColOffset:{3},Namespace:"{4}",FileID:"{5}",Filename:"{6}"}})""".format(classModel.Name, classModel.Type, classModel.LineNo, classModel.ColOffset,classModel.Namespace,str(f.FileID),f.Filename))
+                            queries.append("""MERGE (parent:Class{{ClassName:"{0}",Type:"{1}",LineNo:'',ColOffset:''}})""".format(parent.Name, parent.Type))
+                            queries.append("""MERGE (parent)-[r:parentOf]->(base)""")
+                            graph.query(" ".join(queries))
+
+                            clientTerms.redis.hset(
+                                "term:"+str(term),
+                                mapping={
+                                    'ClassName':parent.Name,
+                                    'FunctionName':'',
+                                    'Position':"",
+                                    'FileID':""
+                                }
+                            )
+                            term += 1
 
             #creating autocompleter
             for cls in classes:

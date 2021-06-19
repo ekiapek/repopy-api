@@ -517,11 +517,18 @@ def findParentRecursive(graph,currentClass,level):
                 parentModel.RelationName = "parent"
             listResParent.append(parentModel)
 
-            resGraphParent2 = graph.query("""MATCH (n:Class{{ClassName:"{0}",FileID:"{1}"}})<-[r:parentOf]-(m:Class) RETURN m""".format(currClass['ClassName'],currClass['FileID']))
-            if len(resGraphParent2.result_set) > 0:
-                ressFindParent = findParentRecursive(graph=graph,currentClass=currClass,level=level+1)
-                if ressFindParent is not None and len(ressFindParent) > 0:
-                    listResParent += ressFindParent
+            if parentModel.FileID != "":
+                resGraphParent2 = graph.query("""MATCH (n:Class{{ClassName:"{0}",FileID:"{1}"}})<-[r:parentOf]-(m:Class) RETURN m""".format(currClass['ClassName'],currClass['FileID']))
+                if len(resGraphParent2.result_set) > 0:
+                    ressFindParent = findParentRecursive(graph=graph,currentClass=currClass,level=level+1)
+                    if ressFindParent is not None and len(ressFindParent) > 0:
+                        listResParent += ressFindParent
+            else:
+                resGraphParent2 = graph.query("""MATCH (n:Class{{ClassName:"{0}"}})<-[r:parentOf]-(m:Class) RETURN m""".format(currClass['ClassName']))
+                if len(resGraphParent2.result_set) > 0:
+                    ressFindParent = findParentRecursive(graph=graph,currentClass=currClass,level=level+1)
+                    if ressFindParent is not None and len(ressFindParent) > 0:
+                        listResParent += ressFindParent
     else:
         return None
     

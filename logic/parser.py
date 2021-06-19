@@ -56,7 +56,9 @@ def parseCode(base_dir, repository_id):
                         document.Classes += classNode                
 
         repo.Documents.append(document)
-
+    # f = open("hasil_parse.json","a")
+    # f.write(jsons.dumps(repo))
+    # f.close()
     return repo
 
 def parseClassOnly(node, imports, namespace=None):
@@ -73,33 +75,47 @@ def parseClassOnly(node, imports, namespace=None):
         # print(node.name+" line: "+str(node.blockstart_tolineno)+" col: "+str(node.col_offset)+" Parent: ")
         for base in node.bases:
             if(isinstance(base, astroid.Attribute)):
-                if(isinstance(base.expr, astroid.Name)):
-                    for x in imports:
-                        if(x.ModuleAliasName != None):
-                            if(x.ModuleAliasName == base.expr.name):
-                                attrNode = ParentClassModel()
-                                attrNode.Name = x.ModulePackageName + "." + \
-                                    x.ModuleAliasName + "." + base.attrname
-                                attrNode.Type = "attribute"
-                                classNode.Parents.append(attrNode)
-                                break
-                            else:
-                                attrNode = ParentClassModel()
-                                attrNode.Name = base.attrname
-                                attrNode.Type = "attribute"
-                                classNode.Parents.append(attrNode)
-                        else:
-                            if(x.ModuleName == base.expr.name):
-                                attrNode = ParentClassModel()
-                                attrNode.Name = x.ModulePackageName + "." + x.ModuleName + "." + base.attrname
-                                attrNode.Type = "attribute"
-                                classNode.Parents.append(attrNode)
-                                break
-                            else:
-                                attrNode = ParentClassModel()
-                                attrNode.Name = base.attrname
-                                attrNode.Type = "attribute"
-                                classNode.Parents.append(attrNode)
+                for basename in node.basenames:
+                    if base.attrname in basename:
+                        attrNode = ParentClassModel()
+                        attrNode.Name = basename
+                        attrNode.Type = "attribute"
+                        classNode.Parents.append(attrNode)
+                        break
+                # attrNode.Name = 
+                # if(isinstance(base.expr, astroid.Name)):
+                    # for x in imports:
+                    #     if(x.ModuleAliasName != None):
+                    #         if(x.ModuleAliasName == base.expr.name):
+                    #             attrNode = ParentClassModel()
+                    #             if x.ModulePackageName != None:
+                    #                 attrNode.Name = x.ModulePackageName + "." + \
+                    #                                 x.ModuleAliasName + "." + base.attrname
+                    #             else:
+                    #                 attrNode.Name = x.ModuleAliasName + "." + base.attrname
+                    #             attrNode.Type = "attribute"
+                    #             classNode.Parents.append(attrNode)
+                    #             break
+                    #         else:
+                    #             attrNode = ParentClassModel()
+                    #             attrNode.Name = base.attrname
+                    #             attrNode.Type = "attribute"
+                    #             classNode.Parents.append(attrNode)
+                    #     else:
+                    #         if(x.ModuleName == base.expr.name):
+                    #             attrNode = ParentClassModel()
+                    #             if x.ModulePackageName != None:
+                    #                 attrNode.Name = x.ModulePackageName + "." + x.ModuleName + "." + base.attrname
+                    #             else:
+                    #                 attrNode.Name = x.ModuleName + "." + base.attrname
+                    #             attrNode.Type = "attribute"
+                    #             classNode.Parents.append(attrNode)
+                    #             break
+                    #         else:
+                    #             attrNode = ParentClassModel()
+                    #             attrNode.Name = base.attrname
+                    #             attrNode.Type = "attribute"
+                    #             classNode.Parents.append(attrNode)
 
                 # print(base.attrname+" col: "+str(base.col_offset))
             elif(isinstance(base, astroid.Call)):

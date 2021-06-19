@@ -25,6 +25,8 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 import os
 import pathlib
+from redisgraph.graph import Graph
+from redisearch.client import Client
 
 redisearch_instance = REDISEARCH_INSTANCE
 redisgraph_instance = REDISGRAPH_INSTANCE
@@ -177,3 +179,38 @@ def repoUpload(request):
         return HttpResponseNotAllowed("Not Allowed!")
 
 # def parseRepo(request):
+def deleteAllIndex(request):
+    try:
+        repositories = Repositories.objects.all()
+        for repository in repositories:
+            try:
+                client = Client(str(repository.RepositoryID),conn=redisearch_instance)
+                graphName = str(repository.RepositoryID) + "-Relations"
+                graph = Graph(graphName,redisgraph_instance)
+                clientTerms = Client(str(repository.RepositoryID)+"-Terms",conn=redisearch_instance)
+                client.drop_index()
+                graph.delete()
+                clientTerms.drop_index()
+            except Exception as e:
+                errmsg = traceback.format_exc(limit=1)
+                tb = traceback.format_tb(e.__traceback__)
+                err = ErrorModel(msg=errmsg, trace=tb,module="Indexer")
+                retrmodelerr = jsons.dumps(err)
+                django_heroku.logging.error(retrmodelerr)
+        response = ResponseModel()
+        response.ResponseCode = RESPONSE_SUCCESS
+        response.ResponseMessage = "OK"
+        response.ResponseObject = str(repository.RepositoryID)
+        retrmodel = jsons.dump(response)
+        return JsonResponse(retrmodel,safe=False)
+    except Exception as e:
+        response = ResponseModel()
+        response.ResponseCode = RESPONSE_ERROR
+        response.ResponseMessage = "error"
+        errmsg = traceback.format_exc(limit=1)
+        tb = traceback.format_tb(e.__traceback__)
+        err = ErrorModel(msg=errmsg, trace=tb,module="Indexer")
+        retrmodelerr = jsons.dumps(err)
+        django_heroku.logging.error(retrmodelerr)
+        retrmodel = jsons.dump(response)
+        return JsonResponse(retrmodel,safe=False)
