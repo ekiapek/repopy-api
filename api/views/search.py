@@ -401,10 +401,10 @@ def search(request):
                                         parentModel = SearchResultRelationModel()
                                         parentModel.RelationName = "parent"
                                         parentModel.Result = parent['ClassName']
-                                        resModel.LineNo = parent['LineNo'] if 'LineNo' in parent else ""
-                                        resModel.ColOffset = parent['ColOffset'] if 'ColOffset' in parent else ""
-                                        resModel.FileID = parent['FileID'] if 'FileID' in parent else ""
-                                        resModel.Filename = parent['Filename'] if 'Filename' in parent else "external library"
+                                        parentModel.LineNo = parent['LineNo'] if 'LineNo' in parent else ""
+                                        parentModel.ColOffset = parent['ColOffset'] if 'ColOffset' in parent else ""
+                                        parentModel.FileID = parent['FileID'] if 'FileID' in parent else ""
+                                        parentModel.Filename = parent['Filename'] if 'Filename' in parent else "external library"
 
                                         resModel.Relations.append(parentModel)
 
