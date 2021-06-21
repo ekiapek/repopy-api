@@ -312,7 +312,7 @@ def search(request):
                 for tupRedisResult in rediSearchRes:
                     resFunc = tupRedisResult[0]
                     resCls = tupRedisResult[1]
-                    resGraph = graph.query("""MATCH (n:Function{{Name:"{0}",FileID:"{1}"}})<-[r:HasFunction]-(m:Class{{ClassName:"{2}",FileID:"{3}"}}) RETURN n,m""".format(resFunc.FunctionName,resFunc.FileID,resCls.ClassName,resCls.FileID))
+                    resGraph = graph.query("""MATCH (n:Function{{Name:"{0}"}})<-[r:HasFunction]-(m:Class{{ClassName:"{1}"}}) RETURN n,m""".format(resFunc.FunctionName,resCls.ClassName))
                     if resGraph is not None and len(resGraph.result_set) > 0:
                         for graphRes in resGraph.result_set:
                             ressFunc = graphRes[0].properties
@@ -335,16 +335,19 @@ def search(request):
 
                             resModel.Relations.append(resRelationModel)
 
-                            listResult.append(resModel)
+                            if not foundDuplicateInSearchResult(resModel,listResult):
+                                listResult.append(resModel)
                     else:
                         #finding function definition in parent class
-                        resgraphCurrentClassOnly = graph.query("""MATCH (n:Class{{ClassName:"{0}",FileID:"{1}"}}) RETURN n""".format(resCls.ClassName,resCls.FileID))                        
+                        resgraphCurrentClassOnly = graph.query("""MATCH (n:Class{{ClassName:"{0}"}}) RETURN n""".format(resCls.ClassName,resCls.FileID))                        
                         if resgraphCurrentClassOnly is not None and len(resgraphCurrentClassOnly.result_set) > 0:
                             for cls in resgraphCurrentClassOnly.result_set:
                                 currCls = cls[0].properties
-                                ressFunction = findFunctionInParentRecursive(graph=graph,currentClass=currCls,currentFunction=resFunc)
-                                if ressFunction is not None and len(ressFunction) > 0:
-                                    listResult.extend(ressFunction)
+                                ressFunctions = findFunctionInParentRecursive(graph=graph,currentClass=currCls,currentFunction=resFunc)
+                                if ressFunctions is not None and len(ressFunctions) > 0:
+                                    for function in ressFunctions:
+                                        if not foundDuplicateInSearchResult(function,listResult):
+                                            listResult.append(function)
 
             if len(splitQuery) > 0:
                 rediSearchRes = []  #contains indexed terms in RediSearch
@@ -513,7 +516,7 @@ def search(request):
 
 def findFuntionInParent(graph,parentClass,currentFunction):
     listResFunc = []
-    resGraphFunction = graph.query("""MATCH (n:Function{{Name:"{0}",FileID:"{1}"}})<-[r:HasFunction]-(m:Class{{ClassName:"{2}",FileID:"{3}"}}) RETURN n,m""".format(currentFunction.FunctionName,currentFunction.FileID,parentClass['ClassName'],parentClass['FileID']))
+    resGraphFunction = graph.query("""MATCH (n:Function{{Name:"{0}"}})<-[r:HasFunction]-(m:Class{{ClassName:"{1}"}}) RETURN n,m""".format(currentFunction.FunctionName,parentClass['ClassName']))
     if resGraphFunction is not None and len(resGraphFunction.result_set)>0:
         for resFunc in  resGraphFunction.result_set:
             listResFunc.append(resFunc[0].properties)
@@ -595,7 +598,7 @@ def findChildRecursive(graph,currentClass,level):
 
 def findFunctionInParentRecursive(graph,currentClass,currentFunction):
     listResult = []
-    resGraphParent = graph.query("""MATCH (n:Class{{ClassName:"{0}",FileID:"{1}"}})<-[r:parentOf]-(m:Class) RETURN m""".format(currentClass['ClassName'],currentClass['FileID']))
+    resGraphParent = graph.query("""MATCH (n:Class{{ClassName:"{0}"}})<-[r:parentOf]-(m:Class) RETURN m""".format(currentClass['ClassName']))
     if len(resGraphParent.result_set) > 0:
         for resParents in resGraphParent.result_set:
             currClass = resParents[0].properties
@@ -607,16 +610,16 @@ def findFunctionInParentRecursive(graph,currentClass,currentFunction):
                     resModel.Result = func['Name']
                     resModel.LineNo = func['LineNo']
                     resModel.ColOffset = func['ColOffset']
-                    resModel.FileID = func['FileID']
-                    resModel.Filename = func['Filename']
+                    resModel.FileID = func['FileID'] if "FileID" in func else ""
+                    resModel.Filename = func['Filename'] if "Filename" in func else ""
                     resModel.HasRelation = True
 
                     resRelationModel = SearchResultRelationModel()
                     resRelationModel.Result = currClass['ClassName']
                     resRelationModel.LineNo = currClass['LineNo']
                     resRelationModel.ColOffset = currClass['ColOffset']
-                    resRelationModel.FileID = currClass['FileID']
-                    resRelationModel.Filename = currClass['Filename']
+                    resRelationModel.FileID = currClass['FileID'] if "FileID" in currClass else ""
+                    resRelationModel.Filename = currClass['Filename'] if "Filename" in currClass else ""
                     resRelationModel.RelationName = "class"
 
                     resModel.Relations.append(resRelationModel)
